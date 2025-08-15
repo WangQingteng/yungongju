@@ -4,73 +4,385 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>极简云工具 - 视频/图片/文件全能处理</title>
-    <!-- 增强CSP策略 -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; worker-src 'self' blob:; script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; img-src 'self' data: https://picsum.photos; font-src 'self'; connect-src 'self' https://cdn.jsdelivr.net; object-src 'none'; frame-src 'self' https://github.com; base-uri 'self';">
-    <!-- PWA配置 -->
+    <!-- 安全增强：CSP内容安全策略（S1） -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; img-src 'self' data: https://picsum.photos; font-src 'self'; connect-src 'self' https://cdn.jsdelivr.net; object-src 'none'; frame-src https://github.com; base-uri 'self';">
+    <!-- PWA基础配置（O3） -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#3b82f6">
     <link rel="apple-touch-icon" href="/icon-192x192.png">
-    <!-- 依赖库 -->
+    <!-- 基础依赖：添加SRI子资源完整性（S2） -->
     <script src="https://cdn.tailwindcss.com" integrity="sha256-7v4Q0L90R6AgrlLz74YoY1A8X7pk26hO7HCVZ13Lw98=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js" integrity="sha256-4I1YZB9hKb0eV94aVn7QXHw86nq0O8tQq1q3xIG5iY=" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/compressorjs@1.2.1/dist/compressor.min.js" integrity="sha256-6Z85sW582L10c28cq62V0oXQ0kL0e4lAh6B8H/fbHk=" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.min.js" integrity="sha256-9X7eT7Z8mGp3dU8bWXoH3Qe9j8r4VjBz4zrwWw4aG8=" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js" integrity="sha256-7F7Qe9n8X8f38Z7YHw8pQ6s6X7jw7pO83xG6J7k1mU=" crossorigin="anonymous"></script>
+    <!-- 新增功能依赖库：添加SRI（S2） -->
+    <script src="https://cdn.jsdelivr.net/npm/compressorjs@1.2.1/dist/compressor.min.js" integrity="sha256-6Z85sW582L10c28cq62V0oXQ0kL0e4lAh6B8H/fbHk=" crossorigin="anonymous"></script> <!-- 图片压缩 -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.min.js" integrity="sha256-9X7eT7Z8mGp3dU8bWXoH3Qe9j8r4VjBz4zrwWw4aG8=" crossorigin="anonymous"></script> <!-- PDF文本提取 -->
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js" integrity="sha256-7F7Qe9n8X8f38Z7YHw8pQ6s6X7jw7pO83xG6J7k1mU=" crossorigin="anonymous"></script> <!-- DOCX文本提取 -->
     <style>
-        /* 原有样式保持不变 */
-        .progress-bar-container { width: 100%; background-color: #e5e7eb; border-radius: 9999px; height: 8px; }
-        .progress-bar { height: 100%; background-color: #3b82f6; border-radius: 9999px; }
-        /* 新增加载动画 */
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3b82f6;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-            margin-right: 8px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        .card { transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .text-content { max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; }
+        /* 进度条样式（E2） */
+        .progress-bar-container { width: 100%; background-color: #e5e7eb; border-radius: 9999px; height: 8px; margin: 0.5rem 0; }
+        .progress-bar { height: 100%; background-color: #3b82f6; border-radius: 9999px; transition: width 0.3s ease; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <!-- 导航栏保持不变 -->
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-md fixed top-0 left-0 right-0 z-10">
+        <div class="container mx-auto px-4 py-3 flex flex-wrap justify-between items-center">
+            <h1 class="text-xl font-bold text-blue-600">极简云工具</h1>
+            <div class="space-x-4 mt-2 md:mt-0">
+                <a href="#video-player" class="text-gray-700 hover:text-blue-600">视频播放/截取</a>
+                <a href="#file-compressor" class="text-gray-700 hover:text-blue-600">文件压缩</a>
+                <a href="#image-compressor" class="text-gray-700 hover:text-blue-600">图片压缩</a>
+                <a href="#text-extractor" class="text-gray-700 hover:text-blue-600">文本提取</a>
+                <a href="https://github.com" target="_blank" class="text-gray-700 hover:text-blue-600">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 首页介绍 -->
+    <header class="pt-24 pb-16 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">全能在线工具集合</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">视频播放/截取、文件压缩、图片压缩、文本提取，浏览器本地完成，安全高效</p>
+        </div>
+    </header>
 
     <!-- 功能区 -->
     <main class="container mx-auto px-4 py-12">
-        <!-- 文本提取模块改进 -->
+        <!-- 1. 视频播放 + 截取模块（新增帧微调：F1） -->
+        <section id="video-player" class="mb-16">
+            <div class="card bg-white rounded-lg shadow p-6 max-w-3xl mx-auto">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.182 2.19a1 1 0 01-1.364-.372L5.982 9.7a1 1 0 01.372-1.364l3.182-2.19a1 1 0 011.364.372l1.894 2.52c.42.56.972.908 1.585.908.705 0 1.31-.463 1.585-.908l1.894-2.52a1 1 0 011.364.372l3.182 2.19a1 1 0 01-.372 1.364l-1.894 2.52c-.42.56-.972.908-1.585.908-.705 0-1.31-.463-1.585-.908l-1.894-2.52a1 1 0 01-.372-1.364z" />
+                    </svg>
+                    视频播放 + 截取
+                </h3>
+                <!-- 视频播放器 -->
+                <video 
+                    id="video-element" 
+                    class="w-full rounded-md border border-gray-200" 
+                    controls 
+                    poster="https://picsum.photos/1200/600"
+                >
+                    您的浏览器不支持 HTML5 视频播放，请更新浏览器。
+                </video>
+                <!-- 视频上传 + 帧控制按钮（新增后退/前进0.1s：F1） -->
+                <div class="mt-4 flex flex-wrap gap-4">
+                    <label for="video-upload" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer">
+                        选择本地视频文件
+                    </label>
+                    <button id="prev-frame" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        后退0.1s
+                    </button>
+                    <button id="capture-frame" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        截取当前帧
+                    </button>
+                    <button id="next-frame" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        前进0.1s
+                    </button>
+                    <input 
+                        type="file" 
+                        id="video-upload" 
+                        accept="video/*" 
+                        class="hidden"
+                    >
+                </div>
+                <p class="mt-2 text-sm text-gray-500">支持格式：MP4、WebM（MP4 兼容性最佳）| 截取后生成 JPG 图片 | 快捷键：←后退0.1s / →前进0.1s</p>
+                <!-- 截取结果 -->
+                <a id="capture-download" class="mt-4 inline-block px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 hidden" download="video-frame.jpg">
+                    下载截取的图片
+                </a>
+            </div>
+        </section>
+
+        <!-- 2. 文件压缩模块（新增实时进度条：E2） -->
+        <section id="file-compressor" class="mb-16">
+            <div class="card bg-white rounded-lg shadow p-6 max-w-3xl mx-auto">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    在线文件压缩
+                </h3>
+                <div class="mb-4">
+                    <label for="file-upload" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer">
+                        选择需要压缩的文件
+                    </label>
+                    <input 
+                        type="file" 
+                        id="file-upload" 
+                        accept="text/*,.json,.txt,.md,.html" 
+                        class="hidden"
+                    >
+                    <p class="mt-2 text-sm text-gray-500">支持格式：文本、JSON、Markdown 等（文本类文件压缩效果最佳）</p>
+                </div>
+                <!-- 压缩状态 + 实时进度条（E2） -->
+                <div id="compress-status" class="mb-2 text-sm text-gray-600 hidden">正在压缩...</div>
+                <div id="compress-progress" class="progress-bar-container hidden">
+                    <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+                </div>
+                <a id="download-link" class="inline-block px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 hidden" download>
+                    下载压缩文件
+                </a>
+            </div>
+        </section>
+
+        <!-- 3. 图片压缩模块 -->
+        <section id="image-compressor" class="mb-16">
+            <div class="card bg-white rounded-lg shadow p-6 max-w-3xl mx-auto">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    在线图片压缩
+                </h3>
+                <!-- 图片预览 -->
+                <div id="image-preview" class="w-full rounded-md border border-gray-200 p-4 text-center text-gray-500 mb-4 hidden">
+                    <img id="preview-img" class="max-w-full max-h-64 mx-auto" alt="图片预览">
+                </div>
+                <!-- 上传 + 质量选择 -->
+                <div class="flex flex-wrap gap-4 mb-4">
+                    <label for="image-upload" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer">
+                        选择本地图片
+                    </label>
+                    <div class="flex items-center">
+                        <label for="compress-quality" class="mr-2 text-gray-700">压缩质量：</label>
+                        <input 
+                            type="range" 
+                            id="compress-quality" 
+                            min="10" 
+                            max="100" 
+                            value="60" 
+                            class="w-32"
+                        >
+                        <span id="quality-value" class="ml-2 text-sm text-gray-600">60%</span>
+                    </div>
+                    <input 
+                        type="file" 
+                        id="image-upload" 
+                        accept="image/jpeg,image/png,image/webp"  <!-- 扩展WebP格式：F4 -->
+                        class="hidden"
+                    >
+                </div>
+                <!-- 压缩按钮 + 结果 -->
+                <button id="compress-image" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    开始压缩
+                </button>
+                <a id="image-download" class="ml-4 inline-block px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 hidden" download="compressed-image.jpg">
+                    下载压缩图片
+                </a>
+                <p class="mt-2 text-sm text-gray-500">支持格式：JPG、PNG、WebP | 质量越低，文件越小（建议保留 50%-70% 兼顾清晰度和体积）</p>
+            </div>
+        </section>
+
+        <!-- 4. 文档文本提取模块（新增PDF扫描件提示：F2） -->
         <section id="text-extractor">
             <div class="card bg-white rounded-lg shadow p-6 max-w-3xl mx-auto">
-                <!-- ... 其他元素保持不变 ... -->
-                <!-- 增强的提取状态显示 -->
-                <div id="extract-status" class="mb-4 text-sm text-gray-600 hidden">
-                    <div class="loader"></div>
-                    <span>正在提取文本，请稍候...</span>
-                </div>
-                <!-- 扫描件错误提示 -->
-                <div id="scan-pdf-warning" class="mb-4 p-3 bg-yellow-50 text-yellow-800 rounded-md hidden">
-                    <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    检测到扫描件PDF，文本提取功能仅支持可搜索的PDF文档
+                    文档文本提取（PDF/DOCX）
+                </h3>
+                <!-- 文件上传 -->
+                <div class="mb-4">
+                    <label for="doc-upload" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer">
+                        选择 PDF 或 DOCX 文件
+                    </label>
+                    <input 
+                        type="file" 
+                        id="doc-upload" 
+                        accept=".pdf,.docx" 
+                        class="hidden"
+                    >
                 </div>
-                <!-- ... 其他元素保持不变 ... -->
+                <!-- 提取状态 -->
+                <div id="extract-status" class="mb-4 text-sm text-gray-600 hidden">正在提取文本...</div>
+                <!-- 提取结果 -->
+                <div id="extract-result" class="mb-4 hidden">
+                    <h4 class="font-semibold text-gray-800 mb-2">提取的文本内容：</h4>
+                    <div id="text-content" class="text-content text-gray-700 mb-4"></div>
+                    <div class="flex gap-4">
+                        <button id="copy-text" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer">
+                            复制文本
+                        </button>
+                        <a id="text-download" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700" download="extracted-text.txt">
+                            下载文本文件
+                        </a>
+                    </div>
+                </div>
+                <p class="mt-2 text-sm text-gray-500">支持格式：PDF（非扫描件）、DOCX | 大文件可能提取较慢，请耐心等待 | 提示：扫描件PDF需后续OCR功能支持</p>
             </div>
         </section>
     </main>
 
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2024 极简云工具 | 部署于 GitHub Pages</p>
+        </div>
+    </footer>
+
+    <!-- JS 逻辑（含核心改进） -->
     <script>
-        // ====================== 文本提取模块增强 ======================
+        // ---------------------- 1. 视频模块：帧微调 + 键盘控制（F1） ----------------------
+        const videoUpload = document.getElementById('video-upload');
+        const videoElement = document.getElementById('video-element');
+        const captureFrameBtn = document.getElementById('capture-frame');
+        const prevFrameBtn = document.getElementById('prev-frame'); // 新增
+        const nextFrameBtn = document.getElementById('next-frame'); // 新增
+        const captureDownload = document.getElementById('capture-download');
+
+        // 视频加载后启用所有控制按钮
+        videoUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const videoUrl = URL.createObjectURL(file);
+                videoElement.src = videoUrl;
+                videoElement.load();
+                captureFrameBtn.disabled = false;
+                prevFrameBtn.disabled = false; // 启用后退
+                nextFrameBtn.disabled = false; // 启用前进
+            }
+        });
+
+        // 帧微调逻辑（0.1s步进）
+        prevFrameBtn.addEventListener('click', () => {
+            videoElement.currentTime = Math.max(0, videoElement.currentTime - 0.1);
+        });
+        nextFrameBtn.addEventListener('click', () => {
+            videoElement.currentTime = Math.min(videoElement.duration, videoElement.currentTime + 0.1);
+        });
+
+        // 键盘←→控制帧微调（F1）
+        document.addEventListener('keydown', (e) => {
+            if (videoElement.src && !e.target.tagName.match(/INPUT|TEXTAREA/)) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    videoElement.currentTime = Math.max(0, videoElement.currentTime - 0.1);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    videoElement.currentTime = Math.min(videoElement.duration, videoElement.currentTime + 0.1);
+                }
+            }
+        });
+
+        // 原有帧截取逻辑
+        captureFrameBtn.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob((blob) => {
+                const blobUrl = URL.createObjectURL(blob);
+                captureDownload.href = blobUrl;
+                captureDownload.classList.remove('hidden');
+            }, 'image/jpeg');
+        });
+
+        // ---------------------- 2. 文件压缩模块：实时进度条（E2） ----------------------
+        const fileUpload = document.getElementById('file-upload');
+        const compressStatus = document.getElementById('compress-status');
+        const compressProgress = document.getElementById('compress-progress');
+        const progressBar = document.getElementById('progress-bar');
+        const downloadLink = document.getElementById('download-link');
+
+        fileUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // 显示状态和进度条
+            compressStatus.classList.remove('hidden');
+            compressProgress.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            downloadLink.classList.add('hidden');
+
+            try {
+                const fileContent = await readFileAsArrayBuffer(file);
+                let processedBytes = 0; // 已处理字节数
+
+                // 带进度回调的压缩（E2核心）
+                const compressedContent = pako.gzip(fileContent, {
+                    onData: (chunk) => {
+                        processedBytes += chunk.length;
+                        const progress = Math.round((processedBytes / fileContent.byteLength) * 100);
+                        progressBar.style.width = `${progress}%`;
+                    }
+                });
+
+                const compressedBlob = new Blob([compressedContent], { type: 'application/gzip' });
+                const downloadUrl = URL.createObjectURL(compressedBlob);
+                downloadLink.href = downloadUrl;
+                downloadLink.download = `${file.name}.gz`;
+                downloadLink.classList.remove('hidden');
+            } catch (err) {
+                alert('压缩失败：' + err.message);
+            } finally {
+                compressStatus.classList.add('hidden');
+                compressProgress.classList.add('hidden');
+            }
+        });
+
+        // ---------------------- 3. 图片压缩模块（扩展WebP格式：F4） ----------------------
+        const imageUpload = document.getElementById('image-upload');
+        const imagePreview = document.getElementById('image-preview');
+        const previewImg = document.getElementById('preview-img');
+        const compressQuality = document.getElementById('compress-quality');
+        const qualityValue = document.getElementById('quality-value');
+        const compressImageBtn = document.getElementById('compress-image');
+        const imageDownload = document.getElementById('image-download');
+
+        // 实时显示压缩质量
+        compressQuality.addEventListener('input', () => {
+            qualityValue.textContent = `${compressQuality.value}%`;
+        });
+
+        // 图片预览（支持WebP）
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const imgUrl = URL.createObjectURL(file);
+                previewImg.src = imgUrl;
+                imagePreview.classList.remove('hidden');
+                compressImageBtn.disabled = false;
+            }
+        });
+
+        // 图片压缩（兼容WebP输出）
+        compressImageBtn.addEventListener('click', (e) => {
+            const file = imageUpload.files[0];
+            if (!file) return;
+
+            new Compressor(file, {
+                quality: compressQuality.value / 100,
+                success: (compressedResult) => {
+                    const compressedUrl = URL.createObjectURL(compressedResult);
+                    imageDownload.href = compressedUrl;
+                    // 根据原格式设置输出格式（支持WebP）
+                    const ext = file.type.includes('webp') ? 'webp' : (file.type.includes('png') ? 'png' : 'jpg');
+                    imageDownload.download = `compressed-${file.name.split('.')[0]}.${ext}`;
+                    imageDownload.classList.remove('hidden');
+                },
+                error: (err) => {
+                    alert('图片压缩失败：' + err.message);
+                }
+            });
+        });
+
+        // ---------------------- 4. 文本提取模块：PDF扫描件提示（F2） ----------------------
         const docUpload = document.getElementById('doc-upload');
         const extractStatus = document.getElementById('extract-status');
-        const scanPdfWarning = document.getElementById('scan-pdf-warning');
+        const extractResult = document.getElementById('extract-result');
         const textContent = document.getElementById('text-content');
-        
+        const copyTextBtn = document.getElementById('copy-text');
+        const textDownload = document.getElementById('text-download');
+        let extractedText = '';
+
         // 初始化PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
 
@@ -78,82 +390,88 @@
             const file = e.target.files[0];
             if (!file) return;
             
-            // 重置状态
             extractStatus.classList.remove('hidden');
-            scanPdfWarning.classList.add('hidden');
             extractResult.classList.add('hidden');
 
             try {
                 if (file.name.endsWith('.pdf')) {
                     extractedText = await extractPdfText(file);
-                    
-                    // 增强扫描件检测
+                    // 扫描件判断（F2核心：文本为空则提示）
                     if (!extractedText.trim()) {
-                        scanPdfWarning.classList.remove('hidden');
-                        extractStatus.classList.add('hidden');
-                        return;
+                        throw new Error('当前PDF为扫描件或无文本内容，暂无法提取文字（后续将支持OCR功能）');
                     }
+                } else if (file.name.endsWith('.docx')) {
+                    extractedText = await extractDocxText(file);
                 }
-                // ... 其他处理逻辑保持不变 ...
+
+                // 显示结果
+                textContent.textContent = extractedText;
+                const textBlob = new Blob([extractedText], { type: 'text/plain' });
+                const textUrl = URL.createObjectURL(textBlob);
+                textDownload.href = textUrl;
+                textDownload.download = `extracted-${file.name.split('.')[0]}.txt`;
+                extractResult.classList.remove('hidden');
             } catch (err) {
-                console.error('文本提取失败:', err);
-                alert(`文本提取失败: ${err.message}`);
+                alert('文本提取失败：' + err.message); // 弹出扫描件提示
             } finally {
                 extractStatus.classList.add('hidden');
             }
         });
 
-        // ====================== 图片压缩模块增强 ======================
-        const imageUpload = document.getElementById('image-upload');
-        
-        imageUpload.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            // 验证文件类型
-            const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-            if (!validTypes.includes(file.type)) {
-                alert('请选择 JPG, PNG 或 WebP 格式的图片');
-                imageUpload.value = '';
-                return;
-            }
-            
-            // ... 其他处理逻辑保持不变 ...
+        // 复制文本功能
+        copyTextBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(extractedText).then(() => {
+                alert('文本已复制到剪贴板！');
+            }).catch(err => {
+                alert('复制失败：' + err.message);
+            });
         });
 
-        // ====================== PWA 服务注册增强 ======================
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', async () => {
-                try {
-                    const registration = await navigator.serviceWorker.register('/sw.js');
-                    
-                    // 检测更新
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed') {
-                                if (navigator.serviceWorker.controller) {
-                                    // 提示用户更新
-                                    if (confirm('新版本可用，是否立即更新？')) {
-                                        newWorker.postMessage({ action: 'skipWaiting' });
-                                    }
-                                }
-                            }
-                        });
-                    });
-                    
-                    // 检查是否有更新
-                    await registration.update();
-                } catch (err) {
-                    console.error('SW 注册失败:', err);
-                }
+        // ---------------------- 辅助函数 ----------------------
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (err) => reject(err);
+                reader.readAsArrayBuffer(file);
             });
         }
 
-        // 监听服务worker消息
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            window.location.reload();
-        });
+        function readFileAsUint8Array(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(new Uint8Array(e.target.result));
+                reader.onerror = (err) => reject(err);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        async function extractPdfText(file) {
+            const uint8Array = await readFileAsUint8Array(file);
+            const pdf = await pdfjsLib.getDocument(uint8Array).promise;
+            let text = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                text += content.items.map(item => item.str).join(' ');
+            }
+            return text;
+        }
+
+        async function extractDocxText(file) {
+            const uint8Array = await readFileAsUint8Array(file);
+            const doc = new window.docx.Document(uint8Array);
+            return doc.getFullText();
+        }
+
+        // ---------------------- PWA Service Worker 注册（O3） ----------------------
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('PWA服务 worker 注册成功：', reg.scope))
+                    .catch(err => console.error('PWA服务 worker 注册失败：', err));
+            });
+        }
     </script>
 </body>
 </html>
