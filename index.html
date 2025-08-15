@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简云工具 - 视频播放 + 文件压缩</title>
+    <!-- 引入 Tailwind CSS（简化样式，无需本地安装） -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入文件压缩库 pako.js（前端 GZIP 压缩） -->
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+    <style>
+        /* 简单动画效果 */
+        .card { transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-md fixed top-0 left-0 right-0 z-10">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-blue-600">极简云工具</h1>
+            <div class="space-x-4">
+                <a href="#video-player" class="text-gray-700 hover:text-blue-600">视频播放</a>
+                <a href="#file-compressor" class="text-gray-700 hover:text-blue-600">文件压缩</a>
+                <a href="https://github.com" target="_blank" class="text-gray-700 hover:text-blue-600">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 首页介绍 -->
+    <header class="pt-24 pb-16 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">在线工具集合</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">无需安装软件，浏览器本地完成视频播放和文件压缩，安全高效</p>
+        </div>
+    </header>
+
+    <!-- 功能区 -->
+    <main class="container mx-auto px-4 py-12">
+        <!-- 1. 视频播放模块 -->
+        <section id="video-player" class="mb-16">
+            <div class="card bg-white rounded-lg shadow p-6 max-w-3xl mx-auto">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.182 2.19a1 1 0 01-1.364-.372L5.982 9.7a1 1 0 01.372-1.364l3.182-2.19a1 1 0 011.364.372l1.894 2.52c.42.56.972.908 1.585.908.705 0 1.31-.463 1.585-.908l1.894-2.52a1 1 0 011.364.372l3.182 2.19a1 1 0 01-.372 1.364l-1.894 2.52c-.42.56-.972.908-1.585.908-.705 0-1.31-.463-1.585-.908l-1.894-2.52a1 1 0 01-.372-1.364z" />
+                    </svg>
+                    在线视频播放
+                </h3>
+                <!-- 视频播放器 -->
+                <video 
+                    id="video-element" 
+                    class="w-full rounded-md border border-gray-200" 
+                    controls 
+                    poster="https://picsum.photos/1200/600"  <!-- 视频封面图 -->
+                >
+                    您的浏览器不支持 HTML5 视频播放，请更新浏览器。
+                </video>
+                <!-- 视频上传按钮 -->
+                <div class="mt-4">
+                    <label for="video-upload" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer">
+                        选择本地视频文件
+                    </label>
+                    <input 
+                        type="file" 
+                        id="video-upload" 
+                        accept="video/*"  <!-- 仅允许视频文件 -->
+                        class="hidden"
+                    >
+                    <p class="mt-2 text-sm text-gray-500">支持格式：MP4、WebM、OGV 等（建议 MP4 兼容性最佳）</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 文件压缩模块 -->
+        <section id="file-compressor">
+            <div class="card bg-white rounded-lg shadow p-6 max-w-3xl mx-auto">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    在线文件压缩
+                </h3>
+                <!-- 文件上传 -->
+                <div class="mb-4">
+                    <label for="file-upload" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer">
+                        选择需要压缩的文件
+                    </label>
+                    <input 
+                        type="file" 
+                        id="file-upload" 
+                        accept="text/*,.json,.txt,.md,.html"  <!-- 支持文本类文件（压缩效果好） -->
+                        class="hidden"
+                    >
+                    <p class="mt-2 text-sm text-gray-500">支持格式：文本、JSON、Markdown 等（视频/图片压缩效果有限，建议仅用于文档）</p>
+                </div>
+                <!-- 压缩状态提示 -->
+                <div id="compress-status" class="mb-4 text-sm text-gray-600 hidden">正在压缩...</div>
+                <!-- 压缩结果（下载按钮） -->
+                <a id="download-link" class="inline-block px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 hidden" download>
+                    下载压缩文件
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2024 极简云工具 | 部署于 GitHub Pages</p>
+        </div>
+    </footer>
+
+    <!-- JS 逻辑 -->
+    <script>
+        // 1. 视频播放功能
+        const videoUpload = document.getElementById('video-upload');
+        const videoElement = document.getElementById('video-element');
+        
+        videoUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // 将本地文件转为 URL 给视频播放器
+                const videoUrl = URL.createObjectURL(file);
+                videoElement.src = videoUrl;
+                videoElement.load(); // 重新加载视频
+            }
+        });
+
+        // 2. 文件压缩功能
+        const fileUpload = document.getElementById('file-upload');
+        const compressStatus = document.getElementById('compress-status');
+        const downloadLink = document.getElementById('download-link');
+        
+        fileUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 显示压缩状态
+            compressStatus.classList.remove('hidden');
+            downloadLink.classList.add('hidden');
+
+            try {
+                // 1. 读取文件内容
+                const fileContent = await readFileAsArrayBuffer(file);
+                // 2. 使用 pako 压缩（GZIP 格式）
+                const compressedContent = pako.gzip(fileContent);
+                // 3. 转为 Blob 用于下载
+                const compressedBlob = new Blob([compressedContent], { type: 'application/gzip' });
+                // 4. 生成下载链接
+                const downloadUrl = URL.createObjectURL(compressedBlob);
+                downloadLink.href = downloadUrl;
+                // 下载文件名：原文件名 + .gz
+                downloadLink.download = `${file.name}.gz`;
+
+                // 显示下载按钮，隐藏状态
+                downloadLink.classList.remove('hidden');
+            } catch (err) {
+                alert('压缩失败：' + err.message);
+            } finally {
+                // 隐藏压缩状态
+                compressStatus.classList.add('hidden');
+            }
+        });
+
+        // 辅助函数：读取文件为 ArrayBuffer
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (err) => reject(err);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+    </script>
+</body>
+</html>
